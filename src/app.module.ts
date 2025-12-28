@@ -11,6 +11,7 @@ import { ServicesModule } from './services/services.module';
 import { OrdersModule } from './orders/orders.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { QueueModule } from './common/queues/queue.module';
+import { AdminModule } from './admin/admin.module';
 
 const moduleMetadata: ModuleMetadata = {
   imports: [
@@ -24,6 +25,7 @@ const moduleMetadata: ModuleMetadata = {
     OrdersModule,
     ScheduleModule.forRoot(),
     QueueModule,
+    AdminModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
