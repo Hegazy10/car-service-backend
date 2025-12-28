@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { OrderStatus } from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
 
 @Injectable()
@@ -67,7 +68,7 @@ export class OrdersService {
 
       return tx.order.update({
         where: { id: order.id },
-        data: { totalPrice: total },
+        data: { status: 'CONFIRMED', totalPrice: total },
       });
     });
   }
@@ -76,6 +77,13 @@ export class OrdersService {
     return this.prisma.order.findMany({
       where: { userId },
       include: { items: true },
+    });
+  }
+
+  async updateStatus(orderId: string, status: OrderStatus) {
+    return this.prisma.order.update({
+      where: { id: orderId },
+      data: { status },
     });
   }
 }

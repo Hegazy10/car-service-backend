@@ -9,6 +9,8 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { ServicesModule } from './services/services.module';
 import { OrdersModule } from './orders/orders.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { QueueModule } from './common/queues/queue.module';
 
 const moduleMetadata: ModuleMetadata = {
   imports: [
@@ -20,6 +22,8 @@ const moduleMetadata: ModuleMetadata = {
     InventoryModule,
     ServicesModule,
     OrdersModule,
+    ScheduleModule.forRoot(),
+    QueueModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
