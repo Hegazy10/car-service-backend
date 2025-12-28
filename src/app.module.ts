@@ -6,6 +6,9 @@ import { UsersModule } from './users/users.module';
 import { CarsModule } from './cars/cars.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { ServicesModule } from './services/services.module';
+import { OrdersModule } from './orders/orders.module';
 
 const moduleMetadata: ModuleMetadata = {
   imports: [
@@ -14,6 +17,9 @@ const moduleMetadata: ModuleMetadata = {
     UsersModule,
     CarsModule,
     MaintenanceModule,
+    InventoryModule,
+    ServicesModule,
+    OrdersModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
