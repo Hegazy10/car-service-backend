@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateInventoryDto } from './dto/create-inventory.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @Injectable()
 export class InventoryService {
@@ -19,8 +20,14 @@ export class InventoryService {
     });
   }
 
-  list() {
-    return this.prisma.inventoryItem.findMany();
+  list(pagination: PaginationDto) {
+    const { skip = 0, take = 20 } = pagination;
+
+    return this.prisma.inventoryItem.findMany({
+      skip,
+      take,
+      orderBy: { createdAt: 'desc' }, // recommended
+    });
   }
 
   async deductStock(itemId: string, quantity: number) {

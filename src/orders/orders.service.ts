@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OrderStatus } from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @Injectable()
 export class OrdersService {
@@ -73,10 +74,17 @@ export class OrdersService {
     });
   }
 
-  listMine(userId: string) {
+  listMine(userId: string, pagination: PaginationDto) {
+    const { skip = 0, take = 20 } = pagination;
+
     return this.prisma.order.findMany({
       where: { userId },
-      include: { items: true },
+      skip,
+      take,
+      orderBy: { createdAt: 'desc' }, // recommended
+      include: {
+        items: true,
+      },
     });
   }
 
