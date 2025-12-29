@@ -19,7 +19,7 @@ export class CreateOrderItemDto {
 }
 
 export class CreateOrderDto {
-  @IsString().slice(________)
+  @IsString()
   carId!: string;
 
   @IsArray()
