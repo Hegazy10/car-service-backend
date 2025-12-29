@@ -1,6 +1,6 @@
 import { Worker } from 'bullmq';
 import { redisConnection } from '../common/queues/queue.module';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 interface MaintenanceJobData {
   carId: string;

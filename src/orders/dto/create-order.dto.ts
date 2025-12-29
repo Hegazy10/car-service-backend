@@ -1,8 +1,9 @@
-import { IsInt, IsOptional, IsString, Min, Validate } from 'class-validator';
+import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { IsArray, ValidateNested, ArrayMinSize } from 'class-validator';
 import { Type } from 'class-transformer';
-import { InventoryOrServiceValidator } from './order-item.validator';
+import { IsInventoryOrService } from './order-item.validator';
 
+@IsInventoryOrService()
 export class CreateOrderItemDto {
   @IsOptional()
   @IsString()
@@ -15,13 +16,10 @@ export class CreateOrderItemDto {
   @IsInt()
   @Min(1)
   quantity!: number;
-
-  @Validate(InventoryOrServiceValidator)
-  _xorCheck!: true;
 }
 
 export class CreateOrderDto {
-  @IsString()
+  @IsString().slice(________)
   carId!: string;
 
   @IsArray()

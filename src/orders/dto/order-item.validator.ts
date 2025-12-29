@@ -1,20 +1,41 @@
 import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
-  ValidationArguments,
+  registerDecorator,
+  ValidationOptions,
 } from 'class-validator';
 
-@ValidatorConstraint({ name: 'inventoryOrService', async: false })
-export class InventoryOrServiceValidator implements ValidatorConstraintInterface {
-  validate(_: unknown, args?: ValidationArguments) {
-    const { inventoryId, serviceId } = args?.object as {
-      inventoryId?: string;
-      serviceId?: string;
-    };
-    return !!inventoryId !== !!serviceId;
+interface ItemInput {
+  inventoryId?: string;
+  serviceId?: string;
+}
+
+@ValidatorConstraint({ name: 'InventoryOrService', async: false })
+export class InventoryOrServiceConstraint implements ValidatorConstraintInterface {
+  validate(value: any) {
+    if (!value) return false;
+
+    const item = value as ItemInput;
+    const hasInventory = !!item.inventoryId;
+    const hasService = !!item.serviceId;
+
+    // XOR logic: (A and !B) or (!A and B)
+    return (hasInventory && !hasService) || (!hasInventory && hasService);
   }
 
   defaultMessage() {
-    return 'Either inventoryId or serviceId must be provided (not both)';
+    return 'Item must provide either an inventoryId or a serviceId, but not both.';
   }
+}
+
+export function IsInventoryOrService(validationOptions?: ValidationOptions) {
+  return function (target: new (...args: any[]) => any): void {
+    registerDecorator({
+      target: target,
+      propertyName: '',
+      ...(validationOptions && { options: validationOptions }),
+      constraints: [],
+      validator: InventoryOrServiceConstraint,
+    });
+  };
 }

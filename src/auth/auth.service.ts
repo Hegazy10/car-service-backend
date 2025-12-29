@@ -1,20 +1,21 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
-const prisma = new PrismaClient();
-
 @Injectable()
 export class AuthService {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
   async register(dto: RegisterDto) {
     const hash = await bcrypt.hash(dto.password, 12);
 
-    const user = await prisma.user.create({
+    const user = await this.prisma.user.create({
       data: {
         email: dto.email,
         passwordHash: hash,
@@ -25,7 +26,7 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
 
@@ -46,7 +47,6 @@ export class AuthService {
       { sub: userId, role },
       {
         secret: process.env.JWT_ACCESS_SECRET as string,
-        // We use NonNullable to strip 'undefined' from the type, satisfying 'exactOptionalPropertyTypes'
         expiresIn: process.env.JWT_ACCESS_EXPIRES_IN as NonNullable<
           JwtSignOptions['expiresIn']
         >,
@@ -63,7 +63,7 @@ export class AuthService {
       },
     );
 
-    await prisma.refreshToken.upsert({
+    await this.prisma.refreshToken.upsert({
       where: { userId },
       update: { token: refreshToken },
       create: {
