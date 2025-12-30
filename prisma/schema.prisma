@@ -94,6 +94,9 @@ model Car {
   modelId   String
   year      Int
   mileageKm Int
+  vin         String?   @unique 
+  plateNumber String   @unique 
+  color       String
 
   user  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   model CarModel @relation(fields: [modelId], references: [id])
@@ -101,8 +104,8 @@ model Car {
   maintenanceRecords MaintenanceRecord[]
   orders             Order[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 /**
