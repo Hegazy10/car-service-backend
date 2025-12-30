@@ -1,67 +1,70 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService, JwtSignOptions } from '@nestjs/jwt';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private prisma: PrismaService,
-    private jwtService: JwtService,
+    private readonly usersService: UsersService,
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   async register(dto: RegisterDto) {
-    const hash = await bcrypt.hash(dto.password, 12);
-
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        passwordHash: hash,
-      },
+    const user = await this.usersService.create({
+      ...dto,
+      role: UserRole.USER,
     });
 
     return this.issueTokens(user.id, user.role);
   }
 
   async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
+    // 1. Find user
+    const user = await this.usersService.findByEmail(dto.email);
+    if (!user) throw new UnauthorizedException('Invalid credentials');
 
-    if (!user) throw new UnauthorizedException();
-
-    const valid = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!valid) throw new UnauthorizedException();
+    const valid = await bcrypt.compare(dto.password, user.password);
+    if (!valid) throw new UnauthorizedException('Invalid credentials');
 
     return this.issueTokens(user.id, user.role);
   }
 
   async refresh(userId: string) {
-    return this.issueTokens(userId);
+    const user = await this.usersService.findOne(userId);
+    return this.issueTokens(user.id, user.role);
   }
 
   private async issueTokens(userId: string, role?: string) {
-    const accessToken = await this.jwtService.signAsync(
-      { sub: userId, role },
-      {
-        secret: process.env.JWT_ACCESS_SECRET as string,
-        expiresIn: process.env.JWT_ACCESS_EXPIRES_IN as NonNullable<
-          JwtSignOptions['expiresIn']
-        >,
-      },
-    );
+    const payload = { sub: userId, role };
 
-    const refreshToken = await this.jwtService.signAsync(
-      { sub: userId },
-      {
-        secret: process.env.JWT_REFRESH_SECRET as string,
-        expiresIn: process.env.JWT_REFRESH_EXPIRES_IN as NonNullable<
-          JwtSignOptions['expiresIn']
-        >,
-      },
-    );
+    const accessSecret = this.configService.get<string>('JWT_ACCESS_SECRET');
+    const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
+
+    if (!accessSecret || !refreshSecret) {
+      throw new Error('JWT secrets are not configured');
+    }
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: accessSecret,
+        expiresIn: this.configService.get('JWT_ACCESS_EXPIRES_IN', '15m'),
+      }),
+      this.jwtService.signAsync(
+        { sub: userId },
+        {
+          secret: refreshSecret,
+          expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN', '7d'),
+        },
+      ),
+    ]);
 
     await this.prisma.refreshToken.upsert({
       where: { userId },
@@ -69,7 +72,7 @@ export class AuthService {
       create: {
         userId,
         token: refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 86400000),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       },
     });
 

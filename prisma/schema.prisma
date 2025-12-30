@@ -45,14 +45,21 @@ enum ServiceCategory {
  */
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  role         UserRole @default(USER)
-
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  
+  phone     String?
+  address   String?
+  city      String?
+  country   String?  @default("Egypt")
+  
+  role      UserRole @default(USER)
+  
   cars         Car[]
   orders       Order[]
-  refreshToken RefreshToken?
+  refreshToken RefreshToken? 
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
