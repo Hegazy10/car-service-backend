@@ -164,14 +164,17 @@ model InventoryItem {
 }
 
 model Service {
-  id        String          @id @default(uuid())
-  name      String
-  category  ServiceCategory
-  basePrice Decimal         @db.Decimal(10, 2)
+  id              String    @id @default(uuid())
+  name            String
+  description     String?
+  category        ServiceCategory
+  basePrice       Decimal   @db.Decimal(10, 2)
+  durationMinutes Int       @default(60)
+  isActive        Boolean   @default(true)
+  orderItems      OrderItem[]
 
-  orderItems OrderItem[]
-
-  createdAt DateTime @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 /**
