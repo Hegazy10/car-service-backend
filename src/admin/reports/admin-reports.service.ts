@@ -36,7 +36,7 @@ export class AdminReportsService {
   }
 
   async lowStockItems(threshold = 5) {
-    return this.prisma.inventoryItem.findMany({
+    return this.prisma.part.findMany({
       where: {
         quantity: { lte: threshold },
       },

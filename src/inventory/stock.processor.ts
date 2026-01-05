@@ -10,7 +10,7 @@ new Worker<{ itemId: string }>(
     const prisma = new PrismaService();
     const { itemId } = job.data;
 
-    const item = await prisma.inventoryItem.findUnique({
+    const item = await prisma.part.findUnique({
       where: { id: itemId },
     });
 

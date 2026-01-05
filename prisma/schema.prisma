@@ -26,11 +26,6 @@ enum OrderStatus {
   CANCELLED
 }
 
-enum InventoryType {
-  PART
-  SERVICE
-}
-
 enum ServiceCategory {
   OIL
   BATTERY
@@ -148,19 +143,21 @@ model MaintenanceRecord {
  * =========================
  */
 
-model InventoryItem {
-  id           String           @id @default(uuid())
-  name         String
-  type         InventoryType
-  category     ServiceCategory?
-  price        Decimal          @db.Decimal(10, 2)
-  quantity     Int
-  deliveryDays Int
+model Part {
+  id                String   @id @default(uuid())
+  name              String
+  sku               String   @unique // Stock Keeping Unit
+  description       String?
+  
+  quantity          Int      @default(0)
+  lowStockThreshold Int      @default(5)
+  price             Decimal  @db.Decimal(10, 2)
+  location          String?  // e.g. "Shelf A"
 
-  orderItems OrderItem[]
+  orderItems        OrderItem[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model Service {
@@ -199,14 +196,16 @@ model Order {
 }
 
 model OrderItem {
-  id          String  @id @default(uuid())
-  orderId     String
-  inventoryId String?
-  serviceId   String?
-  quantity    Int
-  price       Decimal @db.Decimal(10, 2)
+  id        String   @id @default(uuid())
+  orderId   String
+  
+  partId    String?
+  serviceId String?
+  
+  quantity  Int
+  price     Decimal  @db.Decimal(10, 2) // Snapshot of price at time of order
 
-  order         Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  inventoryItem InventoryItem? @relation(fields: [inventoryId], references: [id])
-  service       Service?       @relation(fields: [serviceId], references: [id])
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  part      Part?    @relation(fields: [partId], references: [id])
+  service   Service? @relation(fields: [serviceId], references: [id])
 }

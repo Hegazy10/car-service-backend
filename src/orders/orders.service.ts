@@ -22,7 +22,7 @@ export class OrdersService {
 
       for (const item of dto.items) {
         if (item.inventoryId) {
-          const inv = await tx.inventoryItem.findUnique({
+          const inv = await tx.part.findUnique({
             where: { id: item.inventoryId },
           });
 
@@ -30,7 +30,7 @@ export class OrdersService {
             throw new BadRequestException('Stock issue');
           }
 
-          await tx.inventoryItem.update({
+          await tx.part.update({
             where: { id: inv.id },
             data: { quantity: { decrement: item.quantity } },
           });
@@ -40,7 +40,7 @@ export class OrdersService {
           await tx.orderItem.create({
             data: {
               orderId: order.id,
-              inventoryId: inv.id,
+              partId: inv.id,
               quantity: item.quantity,
               price: inv.price,
             },
