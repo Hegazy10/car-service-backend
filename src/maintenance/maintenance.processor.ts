@@ -20,15 +20,20 @@ new Worker<MaintenanceJobData>(
 
     if (!car) return;
 
-    const rules = await prisma.maintenanceRule.findMany();
+    // FIX 1: Include the Service relation so we can access the name later
+    const rules = await prisma.maintenanceRule.findMany({
+      include: { service: true },
+    });
 
     for (const rule of rules) {
+      // FIX 2: Match using serviceId instead of serviceName
       const last = car.maintenanceRecords
-        .filter((r) => r.serviceName === rule.serviceName)
+        .filter((r) => r.serviceId === rule.serviceId)
         .sort((a, b) => b.performedAt.getTime() - a.performedAt.getTime())[0];
 
       if (!last) {
-        console.log(`Maintenance due: ${rule.serviceName}`);
+        // FIX 3: Log using the related service name
+        console.log(`Maintenance due: ${rule.service.name}`);
         continue;
       }
 
@@ -36,9 +41,11 @@ new Worker<MaintenanceJobData>(
         rule.intervalKm &&
         car.mileageKm - last.mileageKm >= rule.intervalKm
       ) {
-        console.log(`Maintenance due by KM: ${rule.serviceName}`);
+        // FIX 4: Log using the related service name
+        console.log(`Maintenance due by KM: ${rule.service.name}`);
       }
     }
+    await prisma.$disconnect();
   },
   { connection: redisConnection },
 );

@@ -117,24 +117,40 @@ model Car {
  */
 
 model MaintenanceRule {
-  id             String @id @default(uuid())
-  serviceName    String
-  intervalKm     Int?
-  intervalMonths Int?
+  id             String   @id @default(uuid())
+  
+  // Relational Link instead of string name
+  serviceId      String
+  service        Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  
+  intervalKm     Int?     // e.g. Every 10,000 km
+  intervalMonths Int?     // e.g. Every 6 months
 
-  createdAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt 
+
+  @@unique([serviceId]) // Ensure one rule per service type
 }
 
 model MaintenanceRecord {
   id          String   @id @default(uuid())
   carId       String
-  serviceName String
-  mileageKm   Int
-  performedAt DateTime
+  
+  // Relational Link
+  serviceId   String
+  service     Service  @relation(fields: [serviceId], references: [id])
+  
+  mileageKm   Int      // Mileage at time of service
+  notes       String?  // Mechanic notes
+  performedAt DateTime @default(now())
 
-  car Car @relation(fields: [carId], references: [id], onDelete: Cascade)
+  car         Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([carId])
+  @@index([serviceId])
 }
 
 /**
@@ -169,6 +185,9 @@ model Service {
   durationMinutes Int       @default(60)
   isActive        Boolean   @default(true)
   orderItems      OrderItem[]
+
+  maintenanceRules   MaintenanceRule[]
+  maintenanceRecords MaintenanceRecord[]
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
