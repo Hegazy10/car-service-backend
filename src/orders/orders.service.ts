@@ -1,97 +1,57 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { OrderStatus } from '@prisma/client';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { ORDERS_REPOSITORY } from './interfaces/orders.repository.interface';
+import type { IOrdersRepository } from './interfaces/orders.repository.interface';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { UserRole } from '@prisma/client';
+import { CarsService } from '../cars/cars.service';
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(ORDERS_REPOSITORY)
+    private readonly ordersRepository: IOrdersRepository,
+    private readonly carsService: CarsService, // To validate car ownership
+  ) {}
 
   async create(userId: string, dto: CreateOrderDto) {
-    return this.prisma.$transaction(async (tx) => {
-      let total = 0;
+    // 1. Verify Car Ownership
+    await this.carsService.findOne(dto.carId, userId);
 
-      const order = await tx.order.create({
-        data: {
-          userId,
-          carId: dto.carId,
-          totalPrice: 0,
-        },
-      });
-
-      for (const item of dto.items) {
-        if (item.inventoryId) {
-          const inv = await tx.part.findUnique({
-            where: { id: item.inventoryId },
-          });
-
-          if (!inv || inv.quantity < item.quantity) {
-            throw new BadRequestException('Stock issue');
-          }
-
-          await tx.part.update({
-            where: { id: inv.id },
-            data: { quantity: { decrement: item.quantity } },
-          });
-
-          total += Number(inv.price) * item.quantity;
-
-          await tx.orderItem.create({
-            data: {
-              orderId: order.id,
-              partId: inv.id,
-              quantity: item.quantity,
-              price: inv.price,
-            },
-          });
-        }
-
-        if (item.serviceId) {
-          const svc = await tx.service.findUnique({
-            where: { id: item.serviceId },
-          });
-
-          if (!svc) throw new BadRequestException('Service missing');
-
-          total += Number(svc.basePrice) * item.quantity;
-
-          await tx.orderItem.create({
-            data: {
-              orderId: order.id,
-              serviceId: svc.id,
-              quantity: item.quantity,
-              price: svc.basePrice,
-            },
-          });
-        }
-      }
-
-      return tx.order.update({
-        where: { id: order.id },
-        data: { status: 'CONFIRMED', totalPrice: total },
-      });
-    });
+    // 2. Delegate to Repository for Transactional Creation
+    return this.ordersRepository.createTransactional(userId, dto);
   }
 
-  listMine(userId: string, pagination: PaginationDto) {
-    const { skip = 0, take = 20 } = pagination;
-
-    return this.prisma.order.findMany({
-      where: { userId },
-      skip,
-      take,
-      orderBy: { createdAt: 'desc' }, // recommended
-      include: {
-        items: true,
-      },
-    });
+  async findAll(pagination: PaginationDto, userId: string, role: UserRole) {
+    // Admins see all; Users see only their own
+    const filterUserId = role === UserRole.ADMIN ? undefined : userId;
+    return this.ordersRepository.findAll(pagination, filterUserId);
   }
 
-  async updateStatus(orderId: string, status: OrderStatus) {
-    return this.prisma.order.update({
-      where: { id: orderId },
-      data: { status },
-    });
+  async findOne(id: string, userId: string, role: UserRole) {
+    const order = await this.ordersRepository.findById(id);
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${id} not found`);
+    }
+
+    // Security Check: Users can only see their own orders
+    if (role !== UserRole.ADMIN && order.userId !== userId) {
+      throw new ForbiddenException(
+        'You do not have permission to view this order',
+      );
+    }
+
+    return order;
+  }
+
+  async updateStatus(id: string, dto: UpdateOrderStatusDto) {
+    await this.ordersRepository.findById(id); // Ensure exists
+    return this.ordersRepository.updateStatus(id, dto.status);
   }
 }

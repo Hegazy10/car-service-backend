@@ -1,29 +1,49 @@
-import { IsInt, IsOptional, IsString, Min } from 'class-validator';
-import { IsArray, ValidateNested, ArrayMinSize } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
-import { IsInventoryOrService } from './order-item.validator';
 
-@IsInventoryOrService()
 export class CreateOrderItemDto {
+  @ApiPropertyOptional({
+    description: 'ID of the Part (Inventory)',
+    example: 'uuid-part',
+  })
   @IsOptional()
-  @IsString()
-  inventoryId?: string;
+  @IsUUID()
+  partId?: string;
 
+  @ApiPropertyOptional({
+    description: 'ID of the Service',
+    example: 'uuid-service',
+  })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   serviceId?: string;
 
+  @ApiProperty({ example: 1, description: 'Quantity of the item' })
   @IsInt()
   @Min(1)
   quantity!: number;
 }
 
 export class CreateOrderDto {
-  @IsString()
+  @ApiProperty({ description: 'The ID of the car being serviced' })
+  @IsUUID()
+  @IsNotEmpty()
   carId!: string;
 
+  @ApiProperty({
+    type: [CreateOrderItemDto],
+    description: 'List of parts or services',
+  })
   @IsArray()
-  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => CreateOrderItemDto)
   items!: CreateOrderItemDto[];
