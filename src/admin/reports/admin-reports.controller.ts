@@ -1,35 +1,35 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdminReportsService } from './admin-reports.service';
+import { GetReportDto } from './dto/get-report.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
 
-@ApiTags('Admin / Reports')
-@ApiBearerAuth('JWT')
-@Controller('admin/reports')
+@ApiTags('Admin Reports')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@Roles(UserRole.ADMIN) // Strict Admin Access
+@Controller('admin/reports')
 export class AdminReportsController {
   constructor(private readonly reportsService: AdminReportsService) {}
 
-  @Get('revenue')
-  @ApiOperation({ summary: 'Get revenue summary (Admin only)' })
-  revenue() {
-    return this.reportsService.revenueSummary();
+  @Get('dashboard')
+  @ApiOperation({ summary: 'Get high-level dashboard statistics' })
+  async getDashboard(@Query() dto: GetReportDto) {
+    return this.reportsService.getDashboardStats(dto);
   }
 
-  @Get('top-services')
-  @ApiOperation({
-    summary: 'Get top services by usage or revenue (Admin only)',
-  })
-  topServices() {
-    return this.reportsService.topServices();
+  @Get('inventory-alerts')
+  @ApiOperation({ summary: 'Get list of parts with low stock' })
+  async getInventoryReport() {
+    return this.reportsService.getInventoryReport();
   }
 
-  @Get('low-stock')
-  @ApiOperation({ summary: 'Get inventory items with low stock (Admin only)' })
-  lowStock() {
-    return this.reportsService.lowStockItems();
+  @Get('popular-services')
+  @ApiOperation({ summary: 'Get top 5 most ordered services' })
+  async getPopularServices() {
+    return this.reportsService.getPopularServices();
   }
 }

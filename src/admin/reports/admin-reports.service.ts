@@ -1,45 +1,39 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { Inject, Injectable } from '@nestjs/common';
+import { REPORTS_REPOSITORY } from './interfaces/reports.repository.interface';
+import type { IReportsRepository } from './interfaces/reports.repository.interface';
+import { GetReportDto } from './dto/get-report.dto';
+import { DashboardStatsDto } from './dto/dashboard-stats.dto';
 
 @Injectable()
 export class AdminReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(REPORTS_REPOSITORY)
+    private readonly reportsRepository: IReportsRepository,
+  ) {}
 
-  async revenueSummary() {
-    const totalRevenue = await this.prisma.order.aggregate({
-      _sum: { totalPrice: true },
-      where: { status: 'COMPLETED' },
-    });
+  async getDashboardStats(dto: GetReportDto) {
+    const start = dto.startDate ? new Date(dto.startDate) : undefined;
+    const end = dto.endDate ? new Date(dto.endDate) : undefined;
 
-    const orderCount = await this.prisma.order.count({
-      where: { status: 'COMPLETED' },
-    });
+    const metrics = await this.reportsRepository.getDashboardMetrics(
+      start,
+      end,
+    );
 
-    return {
-      totalRevenue: totalRevenue._sum.totalPrice ?? 0,
-      completedOrders: orderCount,
-    };
-  }
-
-  async topServices() {
-    return this.prisma.orderItem.groupBy({
-      by: ['serviceId'],
-      _sum: { quantity: true },
-      where: { serviceId: { not: null } },
-      orderBy: {
-        _sum: {
-          quantity: 'desc',
-        },
-      },
-      take: 5,
+    return new DashboardStatsDto({
+      totalUsers: metrics.users,
+      totalCars: metrics.cars,
+      totalOrders: metrics.orders,
+      totalRevenue: metrics.revenue,
+      lowStockCount: metrics.lowStockCount,
     });
   }
 
-  async lowStockItems(threshold = 5) {
-    return this.prisma.part.findMany({
-      where: {
-        quantity: { lte: threshold },
-      },
-    });
+  async getInventoryReport() {
+    return this.reportsRepository.getLowStockParts();
+  }
+
+  async getPopularServices() {
+    return this.reportsRepository.getTopSellingServices();
   }
 }
